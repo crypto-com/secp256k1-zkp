@@ -43,6 +43,19 @@
     } \
 } while(0)
 
+#ifdef USE_SGX
+    #include <ocalls.h>
+    #include <stdlib.h>
+    #include <stdio.h>
+    static void secp256k1_default_illegal_callback_fn(const char* str, void* data) {
+        (void)data;
+        printf_sgx("[libsecp256k1] illegal argument: %s\n", str);
+    }
+    static void secp256k1_default_error_callback_fn(const char* str, void* data) {
+        (void)data;
+        printf_sgx("[libsecp256k1] illegal argument: %s\n", str);
+    }    
+#else
 #ifndef USE_EXTERNAL_DEFAULT_CALLBACKS
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,6 +72,7 @@ static void secp256k1_default_error_callback_fn(const char* str, void* data) {
 #else
 void secp256k1_default_illegal_callback_fn(const char* str, void* data);
 void secp256k1_default_error_callback_fn(const char* str, void* data);
+#endif
 #endif
 
 static const secp256k1_callback default_illegal_callback = {

@@ -24,6 +24,19 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
     cb->fn(text, (void*)cb->data);
 }
 
+#ifdef USE_SGX
+#ifdef DETERMINISTIC
+#define TEST_FAILURE(msg) do { \
+    printf_sgx("%s\n", msg); \
+    abort(); \
+} while(0);
+#else
+#define TEST_FAILURE(msg) do { \
+    printf_sgx("%s:%d: %s\n", __FILE__, __LINE__, msg); \
+    abort(); \
+} while(0)
+#endif
+#else
 #ifdef DETERMINISTIC
 #define TEST_FAILURE(msg) do { \
     fprintf(stderr, "%s\n", msg); \
@@ -34,6 +47,7 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
     fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, msg); \
     abort(); \
 } while(0)
+#endif
 #endif
 
 #if SECP256K1_GNUC_PREREQ(3, 0)
