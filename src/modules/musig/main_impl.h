@@ -211,7 +211,7 @@ int secp256k1_musig_session_initialize(const secp256k1_context* ctx, secp256k1_m
     return 1;
 }
 
-int secp256k1_musig_session_get_public_nonce(const secp256k1_context* ctx, secp256k1_musig_session *session, secp256k1_musig_session_signer_data *signers, secp256k1_pubkey *nonce, const unsigned char *const *commitments, size_t n_commitments) {
+int secp256k1_musig_session_get_public_nonce(const secp256k1_context* ctx, secp256k1_musig_session *session, secp256k1_musig_session_signer_data *signers, secp256k1_pubkey *nonce, const unsigned char *const *commitments, size_t n_commitments, const unsigned char *msg32) {
     secp256k1_sha256 sha;
     unsigned char nonce_commitments_hash[32];
     size_t i;
@@ -222,6 +222,10 @@ int secp256k1_musig_session_get_public_nonce(const secp256k1_context* ctx, secp2
     ARG_CHECK(signers != NULL);
     ARG_CHECK(nonce != NULL);
     ARG_CHECK(commitments != NULL);
+    /* If the message was not set during initialization it must be set now. */
+    ARG_CHECK(!(!session->msg_is_set && msg32 == NULL));
+    /* The message can only be set once. */
+    ARG_CHECK(!(session->msg_is_set && msg32 != NULL));
 
     if (!session->has_secret_data || n_commitments != session->n_signers) {
         return 0;
@@ -230,6 +234,10 @@ int secp256k1_musig_session_get_public_nonce(const secp256k1_context* ctx, secp2
         ARG_CHECK(commitments[i] != NULL);
     }
 
+    if (msg32 != NULL) {
+        memcpy(session->msg, msg32, 32);
+        session->msg_is_set = 1;
+    }
     secp256k1_sha256_initialize(&sha);
     for (i = 0; i < n_commitments; i++) {
         memcpy(signers[i].nonce_commitment, commitments[i], 32);
@@ -254,6 +262,7 @@ int secp256k1_musig_session_initialize_verifier(const secp256k1_context* ctx, se
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(session != NULL);
     ARG_CHECK(signers != NULL);
+    ARG_CHECK(msg32 != NULL);
     ARG_CHECK(combined_pk != NULL);
     ARG_CHECK(pk_hash32 != NULL);
     ARG_CHECK(commitments != NULL);
@@ -278,11 +287,8 @@ int secp256k1_musig_session_initialize_verifier(const secp256k1_context* ctx, se
 
     memcpy(session->pk_hash, pk_hash32, 32);
     session->nonce_is_set = 0;
-    session->msg_is_set = 0;
-    if (msg32 != NULL) {
-        memcpy(session->msg, msg32, 32);
-        session->msg_is_set = 1;
-    }
+    session->msg_is_set = 1;
+    memcpy(session->msg, msg32, 32);
     session->has_secret_data = 0;
     session->nonce_commitments_hash_is_set = 0;
 
@@ -373,19 +379,6 @@ int secp256k1_musig_session_combine_nonces(const secp256k1_context* ctx, secp256
     return 1;
 }
 
-int secp256k1_musig_session_set_msg(const secp256k1_context* ctx, secp256k1_musig_session *session, const unsigned char *msg32) {
-    VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(session != NULL);
-    ARG_CHECK(msg32 != NULL);
-
-    if (session->msg_is_set) {
-        return 0;
-    }
-    memcpy(session->msg, msg32, 32);
-    session->msg_is_set = 1;
-    return 1;
-}
-
 int secp256k1_musig_partial_signature_serialize(const secp256k1_context* ctx, unsigned char *out32, const secp256k1_musig_partial_signature* sig) {
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(out32 != NULL);
@@ -473,7 +466,7 @@ int secp256k1_musig_partial_sign(const secp256k1_context* ctx, const secp256k1_m
     return 1;
 }
 
-int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp256k1_musig_session *session, secp256k1_schnorrsig *sig, const secp256k1_musig_partial_signature *partial_sigs, size_t n_sigs) {
+int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp256k1_musig_session *session, secp256k1_schnorrsig *sig, const secp256k1_musig_partial_signature *partial_sigs, size_t n_sigs, const unsigned char *tweak32) {
     size_t i;
     secp256k1_scalar s;
     secp256k1_ge noncep;
@@ -500,6 +493,25 @@ int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp
             return 0;
         }
         secp256k1_scalar_add(&s, &s, &term);
+    }
+
+    /* If there is a tweak then add `msghash` times `tweak` to `s`.*/
+    if (tweak32 != NULL) {
+        unsigned char msghash[32];
+        secp256k1_scalar e, scalar_tweak;
+        int overflow = 0;
+
+        if (!secp256k1_musig_compute_messagehash(ctx, msghash, session)) {
+            return 0;
+        }
+        secp256k1_scalar_set_b32(&e, msghash, NULL);
+        secp256k1_scalar_set_b32(&scalar_tweak, tweak32, &overflow);
+        if (overflow || !secp256k1_eckey_privkey_tweak_mul(&e, &scalar_tweak)) {
+            /* This mimics the behavior of secp256k1_ec_privkey_tweak_mul regarding
+             * overflow and tweak32 being 0. */
+            return 0;
+        }
+        secp256k1_scalar_add(&s, &s, &e);
     }
 
     secp256k1_pubkey_load(ctx, &noncep, &session->combined_nonce);
