@@ -1,4 +1,13 @@
 #ifdef USE_SGX
+
+#ifdef USE_EDP
+/* FIXME: no need for this in upstream where "dont_replace_c_symbols" is off by default */
+static inline int printf_sgx(const char *fmt, ...) {
+    return 1;
+}
+#endif
+
+#ifndef USE_EDP
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -18,4 +27,6 @@ static inline int printf_sgx(const char *fmt, ...) {
     u_write_ocall(&ret, STDOUT_FILENO, buf, strnlen(buf, BUFSIZ));
     return 0;
 }
+#endif
+
 #endif
