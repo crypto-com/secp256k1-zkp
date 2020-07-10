@@ -419,14 +419,14 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_musig_partial_sig_verif
  *  Args:         ctx: pointer to a context object (cannot be NULL)
  *            session: initialized session for which the combined nonce has been
  *                     computed (cannot be NULL)
- *  Out:          sig: complete signature (cannot be NULL)
+ *  Out:          sig64: complete signature (cannot be NULL)
  *  In:  partial_sigs: array of partial signatures to combine (cannot be NULL)
  *             n_sigs: number of signatures in the partial_sigs array
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_musig_partial_sig_combine(
     const secp256k1_context* ctx,
     const secp256k1_musig_session *session,
-    secp256k1_schnorrsig *sig,
+    unsigned char *sig64,
     const secp256k1_musig_partial_signature *partial_sigs,
     size_t n_sigs
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
@@ -461,7 +461,7 @@ SECP256K1_API int secp256k1_musig_partial_sig_adapt(
  *           0: otherwise
  *  Args:         ctx: pointer to a context object (cannot be NULL)
  *  Out:sec_adaptor32: 32-byte secret adaptor (cannot be NULL)
- *  In:           sig: complete 2-of-2 signature (cannot be NULL)
+ *  In:           sig64: complete 2-of-2 signature (cannot be NULL)
  *       partial_sigs: array of partial signatures (cannot be NULL)
  *     n_partial_sigs: number of elements in partial_sigs array
  *   is_nonce_negated: the `is_nonce_negated` output of `musig_session_combine_nonces`
@@ -469,7 +469,7 @@ SECP256K1_API int secp256k1_musig_partial_sig_adapt(
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_musig_extract_secret_adaptor(
     const secp256k1_context* ctx,
     unsigned char *sec_adaptor32,
-    const secp256k1_schnorrsig *sig,
+    const unsigned char *sig64,
     const secp256k1_musig_partial_signature *partial_sigs,
     size_t n_partial_sigs,
     int is_nonce_negated

@@ -129,7 +129,7 @@ int sign(const secp256k1_context* ctx, unsigned char seckeys[][32], const secp25
     secp256k1_xonly_pubkey pubkeys[N_SIGNERS];
     secp256k1_xonly_pubkey combined_pk;
     unsigned char msg[32] = "this_could_be_the_hash_of_a_msg!";
-    secp256k1_schnorrsig sig;
+    unsigned char sig[64];
 
     /* Create a context for signing and verification */
     ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);

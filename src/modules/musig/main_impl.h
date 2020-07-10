@@ -140,7 +140,7 @@ int secp256k1_musig_pubkey_tweak_add(const secp256k1_context* ctx, secp256k1_mus
     ARG_CHECK(pre_session->is_tweaked == 0);
 
     pre_session->is_internal_key_negated = pre_session->is_pk_negated;
-    if(!secp256k1_xonly_pubkey_tweak_add(ctx, output_pubkey, is_negated, internal_pubkey, tweak32)) {
+    if(!secp256k1_xonly_pubkey_tweak_add(ctx, output_pubkey, internal_pubkey, tweak32)) {
         return 0;
     }
     memcpy(pre_session->tweak, tweak32, 32);
@@ -497,14 +497,14 @@ int secp256k1_musig_partial_sign(const secp256k1_context* ctx, const secp256k1_m
     return 1;
 }
 
-int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp256k1_musig_session *session, secp256k1_schnorrsig *sig, const secp256k1_musig_partial_signature *partial_sigs, size_t n_sigs) {
+int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp256k1_musig_session *session, unsigned char *sig64, const secp256k1_musig_partial_signature *partial_sigs, size_t n_sigs) {
     size_t i;
     secp256k1_scalar s;
     secp256k1_ge noncep;
     (void) ctx;
 
     VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(sig != NULL);
+    ARG_CHECK(sig64 != NULL);
     ARG_CHECK(partial_sigs != NULL);
     ARG_CHECK(session != NULL);
     ARG_CHECK(session->magic == session_magic);
@@ -547,8 +547,8 @@ int secp256k1_musig_partial_sig_combine(const secp256k1_context* ctx, const secp
     secp256k1_xonly_pubkey_load(ctx, &noncep, &session->combined_nonce);
     VERIFY_CHECK(secp256k1_fe_is_quad_var(&noncep.y));
     secp256k1_fe_normalize(&noncep.x);
-    secp256k1_fe_get_b32(&sig->data[0], &noncep.x);
-    secp256k1_scalar_get_b32(&sig->data[32], &s);
+    secp256k1_fe_get_b32(&sig64[0], &noncep.x);
+    secp256k1_scalar_get_b32(&sig64[32], &s);
 
     return 1;
 }
@@ -649,7 +649,7 @@ int secp256k1_musig_partial_sig_adapt(const secp256k1_context* ctx, secp256k1_mu
     return 1;
 }
 
-int secp256k1_musig_extract_secret_adaptor(const secp256k1_context* ctx, unsigned char *sec_adaptor32, const secp256k1_schnorrsig *sig, const secp256k1_musig_partial_signature *partial_sigs, size_t n_partial_sigs, int is_combined_nonce_negated) {
+int secp256k1_musig_extract_secret_adaptor(const secp256k1_context* ctx, unsigned char *sec_adaptor32, const unsigned char *sig64, const secp256k1_musig_partial_signature *partial_sigs, size_t n_partial_sigs, int is_combined_nonce_negated) {
     secp256k1_scalar t;
     secp256k1_scalar s;
     int overflow;
@@ -658,10 +658,10 @@ int secp256k1_musig_extract_secret_adaptor(const secp256k1_context* ctx, unsigne
     (void) ctx;
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(sec_adaptor32 != NULL);
-    ARG_CHECK(sig != NULL);
+    ARG_CHECK(sig64 != NULL);
     ARG_CHECK(partial_sigs != NULL);
 
-    secp256k1_scalar_set_b32(&t, &sig->data[32], &overflow);
+    secp256k1_scalar_set_b32(&t, &sig64[32], &overflow);
     if (overflow) {
         return 0;
     }

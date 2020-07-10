@@ -26,7 +26,7 @@ void musig_simple_test(secp256k1_scratch_space *scratch) {
     const unsigned char *ncs[2];
     unsigned char public_nonce[3][32];
     secp256k1_musig_partial_signature partial_sig[2];
-    secp256k1_schnorrsig final_sig;
+    unsigned char final_sig[64];
 
     secp256k1_rand256(session_id[0]);
     secp256k1_rand256(session_id[1]);
@@ -76,8 +76,8 @@ void musig_api_tests(secp256k1_scratch_space *scratch) {
     secp256k1_musig_partial_signature partial_sig[2];
     secp256k1_musig_partial_signature partial_sig_adapted[2];
     secp256k1_musig_partial_signature partial_sig_overflow;
-    secp256k1_schnorrsig final_sig;
-    secp256k1_schnorrsig final_sig_cmp;
+    unsigned char final_sig[64];
+    unsigned char final_sig_cmp[64];
 
     unsigned char buf[32];
     unsigned char sk[2][32];
@@ -467,8 +467,8 @@ void musig_api_tests(secp256k1_scratch_space *scratch) {
     CHECK(secp256k1_musig_extract_secret_adaptor(none, sec_adaptor1, NULL, partial_sig, 2, 0) == 0);
     CHECK(ecount == 2);
     {
-        secp256k1_schnorrsig final_sig_tmp = final_sig;
-        memcpy(&final_sig_tmp.data[32], ones, 32);
+        unsigned char final_sig_tmp = final_sig;
+        memcpy(&final_sig_tmp[32], ones, 32);
         CHECK(secp256k1_musig_extract_secret_adaptor(none, sec_adaptor1, &final_sig_tmp, partial_sig, 2, is_nonce_negated) == 0);
     }
     CHECK(ecount == 2);
@@ -619,7 +619,7 @@ void musig_state_machine_tests(secp256k1_scratch_space *scratch) {
     unsigned char nonce[2][32];
     const unsigned char *ncs[2];
     secp256k1_musig_partial_signature partial_sig[2];
-    secp256k1_schnorrsig sig;
+    unsigned char sig[64];
     unsigned char msghash1[32];
     unsigned char msghash2[32];
     int ecount;
@@ -713,8 +713,8 @@ void scriptless_atomic_swap(secp256k1_scratch_space *scratch) {
      * while the indices 0 and 1 refer to the two signers. Here signer 0 is
      * sending a-coins to signer 1, while signer 1 is sending b-coins to signer
      * 0. Signer 0 produces the adaptor signatures. */
-    secp256k1_schnorrsig final_sig_a;
-    secp256k1_schnorrsig final_sig_b;
+    unsigned char final_sig_a[64];
+    unsigned char final_sig_b[64];
     secp256k1_musig_partial_signature partial_sig_a[2];
     secp256k1_musig_partial_signature partial_sig_b_adapted[2];
     secp256k1_musig_partial_signature partial_sig_b[2];
@@ -861,7 +861,7 @@ void musig_tweak_test_helper(const secp256k1_xonly_pubkey* combined_pubkey, cons
     unsigned char nonce[2][32];
     const unsigned char *ncs[2];
     secp256k1_musig_partial_signature partial_sig[2];
-    secp256k1_schnorrsig final_sig;
+    unsigned char final_sig[64];
 
     secp256k1_rand256(session_id[0]);
     secp256k1_rand256(session_id[1]);
